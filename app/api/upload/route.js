@@ -157,7 +157,7 @@ Be precise. Avoid duplicate entities within the same chunk.`;
                 $addToSet: { documents: newDoc._id }, // Add document ID if not already present
                 $setOnInsert: { createdAt: new Date() }
               },
-              { upsert: true, returnDocument: 'after' }
+              { upsert: true, new: true }
             );
           }
         }
