@@ -1,22 +1,12 @@
 // app/api/upload/route.js
-if (typeof global.DOMMatrix === "undefined") {
-  global.DOMMatrix = class DOMMatrix {
-    constructor() { this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0; }
-  };
-}
-
 import { NextResponse } from "next/server";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+import pdf from "pdf-parse";
 import mammoth from "mammoth";
-
-// Tell PDF.js to use the legacy worker for Node.js compatibility
-pdfjsLib.GlobalWorkerOptions.workerSrc = "pdfjs-dist/legacy/build/pdf.worker.mjs";
 
 import connectDB from "@/lib/mongodb";
 import { chunkText } from "@/lib/chunker";
 import { callLLM, getEmbedding } from "@/lib/openrouter";
 import DocumentChunk from "@/lib/models/Chunk";
-import Triple from "@/lib/models/Triple";
 
 /* =========================
    TEXT EXTRACTION FUNCTION
@@ -26,22 +16,9 @@ async function extractText(buffer, fileType) {
 
   // 📄 PDF
   if (fileType === "pdf") {
-    const data = new Uint8Array(buffer);
-    // disableFontFace: true is critical for Node.js as it prevents loading fonts into a non-existent browser DOM
-    const loadingTask = pdfjsLib.getDocument({ 
-      data,
-      disableFontFace: true,
-      verbosity: 0
-    });
-    const pdf = await loadingTask.promise;
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      // Combine all text pieces from the page
-      const strings = content.items.map((item) => item.str);
-      text += strings.join(" ") + "\n";
-    }
+    // pdf-parse is much more stable in Node.js/Vercel than pdfjs-dist
+    const data = await pdf(buffer);
+    text = data.text;
   }
 
   // 📄 TXT
