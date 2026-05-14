@@ -26,7 +26,7 @@ export async function POST(request) {
 
     // ── Step 0: Identify the LATEST (Active) Document ──────────────
     const activeDoc = await Document.findOne().sort({ createdAt: -1 });
-    
+
     if (!activeDoc) {
       return NextResponse.json({ error: "No documents uploaded yet." }, { status: 400 });
     }
@@ -35,16 +35,16 @@ export async function POST(request) {
 
     // ── Step 1: Identify Entities in the Question ────────────────────
     const entityExtractionPrompt = `Identify the main entities (people, places, organizations, concepts) in the following question.
-Return ONLY a comma-separated list of entity names.
+Return ONLY a comma-separated list of entity names ,  answer it in the elaborate form for better understanding.
 Question: "${question}"`;
 
     const entityNamesStr = await callLLM("You are a linguistic expert.", entityExtractionPrompt);
     const queryEntities = entityNamesStr.split(",").map(e => e.trim()).filter(e => e.length > 0);
-    
+
     // ── Step 2: Retrieve Related Graph Context (Scoped) ──────────────
     let graphContext = "";
     let relationshipCount = 0;
-    
+
     if (queryEntities.length > 0) {
       // Find entities that are in the query AND in the active document
       const foundEntities = await Entity.find({
@@ -65,7 +65,7 @@ Question: "${question}"`;
         relationshipCount = relationships.length;
 
         if (relationships.length > 0) {
-          graphContext = "Related Knowledge Graph Facts:\n" + 
+          graphContext = "Related Knowledge Graph Facts:\n" +
             relationships.map(r => `- (${r.source.name}) --[${r.relation}]--> (${r.target.name})`).join("\n");
         }
       }
@@ -97,7 +97,7 @@ Question: "${question}"`;
 You answer questions using a combination of "Document Context" (raw text) and "Knowledge Graph Facts" (structured relationships).
 Use the structured graph facts to understand connections between entities.
 All context provided is from the SPECIFIC document the user is asking about: "${activeDoc.fileName}".
-If the answer is not in the provided context, say "I couldn't find that specific information."`;
+If the answer is not in the provided context, say "I couldn't find that specific information ,  answer the question in the elaborate form for better understanding."`;
 
     const userMessage = `
 --- KNOWLEDGE GRAPH FACTS ---
@@ -109,7 +109,7 @@ ${chunkContext}
 --- USER QUESTION ---
 ${question}
 
-Answer the question clearly and concisely based on the above information:`;
+Answer the question clearly and celaborately for better understanding based on the above information:`;
 
     const answer = await callLLM(systemPrompt, userMessage);
 
